@@ -46,3 +46,33 @@ Available endpoints:
 
 ```bash
 mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
+## AWS Infrastructure with Terraform
+
+Terraform is used to provision the cloud infrastructure.
+
+Resources created:
+- Development EC2 instance
+- Production EC2 instance
+- Security Group for SSH and application access
+
+### Terraform Commands
+
+```bash
+terraform init
+terraform plan
+terraform apply
+```
+
+### SSH Access
+
+Development server:
+
+```bash
+ssh -i ~/.ssh/devops-final-key-v2.pem ubuntu@63.176.133.217
+```
+
+Production server:
+
+```bash
+ssh -i ~/.ssh/devops-final-key-v2.pem ubuntu@18.185.41.70
+```
