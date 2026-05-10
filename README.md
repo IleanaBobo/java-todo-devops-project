@@ -113,3 +113,21 @@ Ansible Deployment
    ↓
 AWS EC2
 
+## Jenkins CI/CD
+
+Jenkins runs inside a Docker container on the Ubuntu VM.
+
+The Jenkins container uses the host Docker daemon through the Docker socket mount:
+
+```bash
+-v /var/run/docker.sock:/var/run/docker.sock
+```
+
+This allows Jenkins to:
+- build Docker images
+- push images to Docker Hub
+- automate deployments
+
+The Docker group ID from the host system was added to the Jenkins container to allow Docker access.
+```
+
