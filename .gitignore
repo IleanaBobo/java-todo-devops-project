@@ -1,0 +1,13 @@
+target/
+.idea/
+*.iml
+
+.terraform/
+terraform/.terraform/
+
+*.tfstate
+*.tfstate.backup
+
+*.pem
+
+

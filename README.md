@@ -76,3 +76,40 @@ Production server:
 ```bash
 ssh -i ~/.ssh/devops-final-key-v2.pem ubuntu@18.185.41.70
 ```
+## Deployment Automation with Ansible
+
+Ansible is used to automate application deployment on AWS EC2 instances.
+
+The Ansible playbook performs the following actions:
+- connects to EC2 instances via SSH
+- installs Docker
+- pulls the Docker image from Docker Hub
+- removes old containers
+- starts the new application container
+
+### Ansible Files
+
+#### inventory.ini
+Contains the list of target servers and SSH configuration.
+
+#### deploy-dev.yml
+Defines the deployment steps for the development environment.
+
+### Run Deployment
+
+```bash
+ansible-playbook -i inventory.ini deploy-dev.yml
+```
+
+## Deployment Architecture
+
+GitHub
+   ↓
+Docker Build
+   ↓
+Docker Hub
+   ↓
+Ansible Deployment
+   ↓
+AWS EC2
+
