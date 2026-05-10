@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'dev',
+                url: 'https://github.com/IleanaBobo/java-todo-devops-project.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                dir('app') {
+                    sh 'mvn clean package'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                dir('app') {
+                    sh 'mvn test'
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                dir('app') {
+                    sh 'docker build -t ileanaboboescu07/java-todo-devops:dev-v1 .'
+                }
+            }
+        }
+
+        stage('Docker Push') {
+            steps {
+                sh 'docker push ileanaboboescu07/java-todo-devops:dev-v1'
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh 'ansible-playbook ansible/deploy-dev.yml -i ansible/inventory.ini'
+            }
+        }
+    }
+}
+
