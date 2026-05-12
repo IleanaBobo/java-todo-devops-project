@@ -1,0 +1,38 @@
+- hosts: prod
+  become: true
+
+  tasks:
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Pull Docker image
+      docker_image:
+        name: ileanaboboescu07/java-todo-devops:dev-v1
+        source: pull
+
+    - name: Remove existing container
+      docker_container:
+        name: java-todo-app-prod
+        state: absent
+        force_kill: yes
+
+    - name: Run Docker container
+      docker_container:
+        name: java-todo-app-prod
+        image: ileanaboboescu07/java-todo-devops:dev-v1
+        state: started
+        restart_policy: always
+        ports:
+          - "8081:8080"
