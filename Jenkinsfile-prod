@@ -29,6 +29,12 @@ stages {
         }
     }
 
+   stage('Approval') {
+    steps {
+        input 'Proceed with Terraform Apply?'
+    }
+}
+
     stage('Terraform Apply') {
         steps {
             withCredentials([
