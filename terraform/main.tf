@@ -53,3 +53,19 @@ resource "aws_instance" "prod_server" {
     Environment = "prod"
   }
 }
+
+resource "aws_eip" "dev_eip" {
+instance = aws_instance.dev_server.id
+
+tags = {
+Name = "dev-elastic-ip"
+}
+}
+
+resource "aws_eip" "prod_eip" {
+instance = aws_instance.prod_server.id
+
+tags = {
+Name = "prod-elastic-ip"
+}
+}
