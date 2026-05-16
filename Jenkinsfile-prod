@@ -3,6 +3,31 @@ agent any
 
 stages {
 
+    stage('Choose Action') {
+        steps {
+            script {
+                env.ACTION = input(
+                    message: 'Select Terraform action:',
+                    parameters: [
+                        choice(
+                            name: 'ACTION',
+                            choices: ['apply', 'destroy'],
+                            description: 'Choose apply to provision infrastructure or destroy to remove it'
+                        )
+                    ]
+                )
+            }
+        }
+    }
+
+    stage('Checkout') {
+        steps {
+            git branch: 'main',
+            credentialsId: 'github-token',
+            url: 'https://github.com/IleanaBobo/java-todo-devops-project.git'
+        }
+    }
+
     stage('Terraform Init') {
         steps {
             withCredentials([
@@ -17,46 +42,54 @@ stages {
     }
 
     stage('Terraform Plan') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
         steps {
             withCredentials([
                 string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                 string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
             ]) {
                 dir('terraform') {
-                    sh 'terraform plan'
+                    sh 'terraform plan -out=tfplan'
                 }
             }
         }
     }
 
-   stage('Approval') {
-    steps {
-        input 'Proceed with Terraform Apply?'
+    stage('Approval') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
+        steps {
+            input 'Proceed with Terraform Apply and Production Deployment?'
+        }
     }
-}
 
     stage('Terraform Apply') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
         steps {
             withCredentials([
                 string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
                 string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
             ]) {
                 dir('terraform') {
-                    sh 'terraform apply -auto-approve'
+                    sh 'terraform apply -auto-approve tfplan'
                 }
             }
-        }
-    }
-
-    stage('Checkout') {
-        steps {
-            git branch: 'main',
-            credentialsId: 'github-token',
-            url: 'https://github.com/IleanaBobo/java-todo-devops-project.git'
         }
     }
 
     stage('Build') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
         steps {
             dir('app') {
                 sh 'mvn clean package'
@@ -65,6 +98,10 @@ stages {
     }
 
     stage('Test') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
         steps {
             dir('app') {
                 sh 'mvn test'
@@ -73,6 +110,10 @@ stages {
     }
 
     stage('Docker Build') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
         steps {
             dir('app') {
                 sh 'docker build -t ileanaboboescu07/java-todo-devops:prod-v1 .'
@@ -81,6 +122,10 @@ stages {
     }
 
     stage('Docker Push') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
         steps {
             dir('app') {
                 sh 'docker push ileanaboboescu07/java-todo-devops:prod-v1'
@@ -89,11 +134,31 @@ stages {
     }
 
     stage('Deploy PROD') {
+        when {
+            expression { env.ACTION == 'apply' }
+        }
+
         steps {
             sh 'ansible-playbook ansible/deploy-prod.yml -i ansible/inventory.ini'
+        }
+    }
+
+    stage('Terraform Destroy') {
+        when {
+            expression { env.ACTION == 'destroy' }
+        }
+
+        steps {
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform destroy -auto-approve'
+                }
+            }
         }
     }
 }
 
 }
-
