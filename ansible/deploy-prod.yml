@@ -19,7 +19,7 @@
 
     - name: Pull Docker image
       docker_image:
-        name: ileanaboboescu07/java-todo-devops:dev-v1
+        name: ileanaboboescu07/java-todo-devops:prod-v1
         source: pull
 
     - name: Remove existing container
@@ -31,7 +31,7 @@
     - name: Run Docker container
       docker_container:
         name: java-todo-app-prod
-        image: ileanaboboescu07/java-todo-devops:dev-v1
+        image: ileanaboboescu07/java-todo-devops:prod-v1
         state: started
         restart_policy: always
         ports:

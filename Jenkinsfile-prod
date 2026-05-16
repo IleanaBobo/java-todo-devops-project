@@ -1,0 +1,99 @@
+pipeline {
+agent any
+
+stages {
+
+    stage('Terraform Init') {
+        steps {
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform init'
+                }
+            }
+        }
+    }
+
+    stage('Terraform Plan') {
+        steps {
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform plan'
+                }
+            }
+        }
+    }
+
+   stage('Approval') {
+    steps {
+        input 'Proceed with Terraform Apply?'
+    }
+}
+
+    stage('Terraform Apply') {
+        steps {
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+    }
+
+    stage('Checkout') {
+        steps {
+            git branch: 'main',
+            credentialsId: 'github-token',
+            url: 'https://github.com/IleanaBobo/java-todo-devops-project.git'
+        }
+    }
+
+    stage('Build') {
+        steps {
+            dir('app') {
+                sh 'mvn clean package'
+            }
+        }
+    }
+
+    stage('Test') {
+        steps {
+            dir('app') {
+                sh 'mvn test'
+            }
+        }
+    }
+
+    stage('Docker Build') {
+        steps {
+            dir('app') {
+                sh 'docker build -t ileanaboboescu07/java-todo-devops:prod-v1 .'
+            }
+        }
+    }
+
+    stage('Docker Push') {
+        steps {
+            dir('app') {
+                sh 'docker push ileanaboboescu07/java-todo-devops:prod-v1'
+            }
+        }
+    }
+
+    stage('Deploy PROD') {
+        steps {
+            sh 'ansible-playbook ansible/deploy-prod.yml -i ansible/inventory.ini'
+        }
+    }
+}
+
+}
+
