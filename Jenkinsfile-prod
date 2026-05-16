@@ -3,23 +3,6 @@ agent any
 
 stages {
 
-    stage('Choose Action') {
-        steps {
-            script {
-                env.ACTION = input(
-                    message: 'Select Terraform action:',
-                    parameters: [
-                        choice(
-                            name: 'ACTION',
-                            choices: ['apply', 'destroy'],
-                            description: 'Choose apply to provision infrastructure or destroy to remove it'
-                        )
-                    ]
-                )
-            }
-        }
-    }
-
     stage('Checkout') {
         steps {
             git branch: 'main',
@@ -43,7 +26,7 @@ stages {
 
     stage('Terraform Plan') {
         when {
-            expression { env.ACTION == 'apply' }
+            expression { params.ACTION == 'apply' }
         }
 
         steps {
@@ -58,19 +41,9 @@ stages {
         }
     }
 
-    stage('Approval') {
-        when {
-            expression { env.ACTION == 'apply' }
-        }
-
-        steps {
-            input 'Proceed with Terraform Apply and Production Deployment?'
-        }
-    }
-
     stage('Terraform Apply') {
         when {
-            expression { env.ACTION == 'apply' }
+            expression { params.ACTION == 'apply' }
         }
 
         steps {
@@ -86,9 +59,6 @@ stages {
     }
 
     stage('Build') {
-        when {
-            expression { env.ACTION == 'apply' }
-        }
 
         steps {
             dir('app') {
@@ -98,9 +68,6 @@ stages {
     }
 
     stage('Test') {
-        when {
-            expression { env.ACTION == 'apply' }
-        }
 
         steps {
             dir('app') {
@@ -110,9 +77,6 @@ stages {
     }
 
     stage('Docker Build') {
-        when {
-            expression { env.ACTION == 'apply' }
-        }
 
         steps {
             dir('app') {
@@ -122,9 +86,6 @@ stages {
     }
 
     stage('Docker Push') {
-        when {
-            expression { env.ACTION == 'apply' }
-        }
 
         steps {
             dir('app') {
@@ -134,31 +95,30 @@ stages {
     }
 
     stage('Deploy PROD') {
-        when {
-            expression { env.ACTION == 'apply' }
-        }
 
         steps {
             sh 'ansible-playbook ansible/deploy-prod.yml -i ansible/inventory.ini'
         }
     }
+       
+     /*
+stage('Terraform Destroy') {
+    when {
+        expression { params.ACTION == 'destroy' }
+    }
 
-    stage('Terraform Destroy') {
-        when {
-            expression { env.ACTION == 'destroy' }
-        }
-
-        steps {
-            withCredentials([
-                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-            ]) {
-                dir('terraform') {
-                    sh 'terraform destroy -auto-approve'
-                }
+    steps {
+        withCredentials([
+            string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+            string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+        ]) {
+            dir('terraform') {
+                sh 'terraform destroy -auto-approve'
             }
         }
     }
+}
+*/
 }
 
 }
