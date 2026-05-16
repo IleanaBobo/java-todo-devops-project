@@ -333,4 +333,4 @@ The project implementation included solving several DevOps issues:
 - Ansible host verification issues,
 - Elastic IP configuration,
 - Jenkins container configuration,
-- AWS public IP changes after EC2 restart.
+- AWS public IP changes after EC2 restart...
