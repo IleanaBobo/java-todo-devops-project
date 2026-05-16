@@ -17,7 +17,7 @@ The pipeline supports:
 - Docker image creation,
 - Docker image publishing,
 - deployment automation,
-- manual approval before Production deployment.
+- Production deployment.
 
 # Technologies Used
 
