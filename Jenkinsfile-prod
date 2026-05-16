@@ -1,5 +1,8 @@
 pipeline {
 agent any
+triggers {
+upstream(upstreamProjects: 'todo-terraform-prod',threshold: hudson.model.Result.SUCCESS)
+}
 
 stages {
 
@@ -8,53 +11,6 @@ stages {
             git branch: 'main',
             credentialsId: 'github-token',
             url: 'https://github.com/IleanaBobo/java-todo-devops-project.git'
-        }
-    }
-
-    stage('Terraform Init') {
-        steps {
-            withCredentials([
-                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-            ]) {
-                dir('terraform') {
-                    sh 'terraform init'
-                }
-            }
-        }
-    }
-
-    stage('Terraform Plan') {
-        when {
-            expression { params.ACTION == 'apply' }
-        }
-
-        steps {
-            withCredentials([
-                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-            ]) {
-                dir('terraform') {
-                    sh 'terraform plan -out=tfplan'
-                }
-            }
-        }
-    }
-
-    stage('Terraform Apply') {
-        when {
-            expression { params.ACTION == 'apply' }
-        }
-
-        steps {
-            withCredentials([
-                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-            ]) {
-                dir('terraform') {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
-            }
         }
     }
 
@@ -100,25 +56,6 @@ stages {
             sh 'ansible-playbook ansible/deploy-prod.yml -i ansible/inventory.ini'
         }
     }
-       
-     /*
-stage('Terraform Destroy') {
-    when {
-        expression { params.ACTION == 'destroy' }
-    }
-
-    steps {
-        withCredentials([
-            string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
-            string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-            dir('terraform') {
-                sh 'terraform destroy -auto-approve'
-            }
-        }
-    }
-}
-*/
 }
 
 }
