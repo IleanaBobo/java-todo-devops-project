@@ -48,6 +48,10 @@ stages {
             sh 'ansible-playbook ansible/deploy-dev.yml -i ansible/inventory.ini'
         }
     }
+post {
+        always {
+            cleanWs()
+        }
+    }
 }
-
 }
