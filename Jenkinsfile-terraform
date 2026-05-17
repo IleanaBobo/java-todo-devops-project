@@ -1,0 +1,86 @@
+pipeline {
+agent any
+
+parameters {
+    choice(
+        name: 'ACTION',
+        choices: ['apply', 'destroy'],
+        description: 'Choose Terraform action'
+    )
+}
+
+stages {
+
+    stage('Checkout') {
+        steps {
+            git branch: 'main',
+            credentialsId: 'github-token',
+            url: 'https://github.com/IleanaBobo/java-todo-devops-project.git'
+        }
+    }
+
+    stage('Terraform Init') {
+        steps {
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform init'
+                }
+            }
+        }
+    }
+
+    stage('Terraform Plan') {
+        when {
+            expression { params.ACTION == 'apply' }
+        }
+
+        steps {
+            dir('terraform') {
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+    }
+
+    stage('Approval') {
+        when {
+            expression { params.ACTION == 'apply' }
+        }
+
+        steps {
+            input 'Proceed with Terraform Apply?'
+        }
+    }
+
+    stage('Terraform Apply') {
+        when {
+            expression { params.ACTION == 'apply' }
+        }
+
+        steps {
+            dir('terraform') {
+                sh 'terraform apply -auto-approve tfplan'
+            }
+        }
+    }
+
+    stage('Terraform Destroy') {
+        when {
+            expression { params.ACTION == 'destroy' }
+        }
+
+        steps {
+            dir('terraform') {
+                sh 'terraform destroy -auto-approve'
+            }
+        }
+    }
+}
+post {
+        always {
+            cleanWs()
+        }
+    }
+}
