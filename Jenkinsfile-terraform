@@ -1,6 +1,7 @@
 pipeline {
 agent any
 
+```
 parameters {
     choice(
         name: 'ACTION',
@@ -38,8 +39,13 @@ stages {
         }
 
         steps {
-            dir('terraform') {
-                sh 'terraform plan -out=tfplan'
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform plan -out=tfplan'
+                }
             }
         }
     }
@@ -60,27 +66,49 @@ stages {
         }
 
         steps {
-            dir('terraform') {
-                sh 'terraform apply -auto-approve tfplan'
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
             }
         }
     }
+```
 
-    stage('Terraform Destroy') {
-        when {
-            expression { params.ACTION == 'destroy' }
-        }
+/*
+stage('Terraform Destroy') {
+when {
+expression { params.ACTION == 'destroy' }
+}
 
+```
         steps {
-            dir('terraform') {
-                sh 'terraform destroy -auto-approve'
+            withCredentials([
+                string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
+            ]) {
+                dir('terraform') {
+                    sh 'terraform destroy -auto-approve'
+                }
             }
         }
     }
+```
+
+*/
+
+```
 }
+
 post {
-        always {
-            cleanWs()
-        }
+    always {
+        cleanWs()
     }
 }
+```
+
+}
+
