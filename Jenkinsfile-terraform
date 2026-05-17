@@ -90,12 +90,6 @@ expression { params.ACTION == 'destroy' }
 
 }
 
-post {
-    always {
-        cleanWs()
-    }
-}
-
 
 }
 
