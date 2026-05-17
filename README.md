@@ -1,336 +1,846 @@
 # Java To-Do DevOps Project
 
-## Project Description
+# Project Overview
 
-This project implements a complete CI/CD pipeline for a Java Spring Boot To-Do application.
+This project is a complete DevOps CI/CD implementation for a Java Spring Boot To-Do application.
 
-The application is containerized with Docker and automatically deployed to AWS EC2 instances using Jenkins, Terraform, and Ansible.
+The project automates:
 
-The project includes two environments:
+* infrastructure provisioning,
+* application build,
+* testing,
+* Docker image creation,
+* Docker image publishing,
+* deployment to AWS EC2 instances,
+* Development and Production environments.
 
-- Development
-- Production
+The entire flow is automated using:
 
-The pipeline supports:
-- automated build,
-- automated testing,
-- Docker image creation,
-- Docker image publishing,
-- deployment automation,
-- Production deployment.
+* Jenkins,
+* Terraform,
+* Docker,
+* Ansible,
+* AWS,
+* GitHub.
+
+The application is deployed automatically to the Development environment after code changes on the `dev` branch.
+
+Production deployment is controlled separately through a dedicated Terraform pipeline and Production pipeline.
+
+---
 
 # Technologies Used
 
-| Technology | Purpose |
-| Java       | Backend application |
-| Spring Boot | REST API framework |
+| Technology  | Purpose                         |
+| ----------- | ------------------------------- |
+| Java        | Backend application             |
+| Spring Boot | REST API framework              |
 | Maven       | Build and dependency management |
-| Docker      | Containerization |
-| Docker Hub  | Docker image registry |
-| Jenkins     | CI/CD automation |
-| Terraform   | Infrastructure as Code |
-| Ansible     | Deployment automation |
-| AWS EC2     | Cloud virtual machines |
-| GitHub      | Source code repository |
+| Docker      | Containerization                |
+| Docker Hub  | Docker image registry           |
+| Jenkins     | CI/CD automation                |
+| Terraform   | Infrastructure as Code          |
+| Ansible     | Deployment automation           |
+| AWS EC2     | Cloud virtual machines          |
+| AWS S3      | Terraform remote backend        |
+| GitHub      | Source code repository          |
+| ngrok       | GitHub webhook testing          |
+
+---
 
 # Project Architecture
 
+```text
 Developer
     ↓
 GitHub Repository
     ↓
-Jenkins Pipeline
+Jenkins Pipelines
     ↓
-Maven Build + Tests
+Terraform Infrastructure
     ↓
-Docker Build
+AWS EC2 Instances
     ↓
-Docker Hub Push
+Docker Build + Push
     ↓
-Deploy DEV
+Docker Hub
     ↓
-Manual Approval
+Ansible Deployment
     ↓
-Deploy PROD
-    ↓
-AWS EC2
+Running Application
+```
 
-# Application Features
+---
 
-The application provides a REST API for task management.
+# Project Flow
 
-Available endpoints:
-GET /tasks
-POST /tasks
-PUT /tasks/{id}
-DELETE /tasks/{id}
-GET /health
+## Development Flow
 
-# Local Run
+1. Developer pushes code to `dev` branch.
+2. GitHub webhook triggers Jenkins automatically.
+3. Jenkins runs the DEV pipeline.
+4. Maven builds the application.
+5. Automated tests run.
+6. Docker image is created.
+7. Docker image is pushed to Docker Hub.
+8. Ansible deploys the application automatically to DEV EC2.
 
-## Run with Maven
+---
 
-mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
+## Production Flow
 
-# Docker
+1. Code is merged into `main` branch.
+2. Terraform pipeline is started manually.
+3. User chooses Terraform action:
 
-Docker is used to containerize the Spring Boot application.
+   * apply
+   * destroy
+4. Terraform provisions AWS infrastructure.
+5. Terraform pipeline finishes successfully.
+6. Production pipeline starts automatically.
+7. Maven build and tests run.
+8. Docker image is built.
+9. Docker image is pushed to Docker Hub.
+10. Ansible deploys the application to Production EC2.
 
-The application runs inside a Docker container instead of directly on the host machine.
+---
 
-Advantages:
-- portability,
-- isolated runtime environment,
-- easier deployment,
-- consistent execution.
+# Branch Strategy
 
-## Docker Commands
+## dev branch
 
-### Build Docker Image
-docker build -t java-todo-devops .
+Used for:
 
-### Run Docker Container
-docker run -d -p 8081:8080 java-todo-devops
+* development,
+* testing,
+* automatic deployment to Development environment.
 
-### View Running Containers
-docker ps
+The DEV Jenkins pipeline uses:
 
-### Stop Container
-docker stop <container_id>
+```text
+Branch: dev
+Jenkinsfile: Jenkinsfile-dev
+```
 
-# Docker Hub
+---
 
-Docker Hub is used as a container registry.
+## main branch
 
-Jenkins pushes Docker images to Docker Hub.
+Used for:
 
-Ansible later pulls the images on AWS EC2 instances during deployment.
+* stable production-ready code,
+* Terraform infrastructure deployment,
+* Production deployment.
 
-Example image:
+The PROD Jenkins pipeline uses:
+
+```text
+Branch: main
+Jenkinsfile: Jenkinsfile-prod
+```
+
+Terraform pipeline uses:
+
+```text
+Branch: main
+Jenkinsfile: Jenkinsfile-terraform
+```
+
+---
+
+# Docker Multi-Stage Build
+
+The project uses a multi-stage Docker build.
+
+This reduces image size and separates:
+
+* build environment,
+* runtime environment.
+
+Dockerfile:
+
+```dockerfile
+FROM maven:3.9-eclipse-temurin-17 AS build
+
+WORKDIR /app
+
+COPY pom.xml .
+COPY src ./src
+
+RUN mvn clean package -DskipTests
+
+FROM eclipse-temurin:17-jdk-alpine
+
+WORKDIR /app
+
+COPY --from=build /app/target/todo-1.0.0.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+---
+
+# Jenkins Pipelines
+
+The project contains 3 separate Jenkins pipelines.
+
+---
+
+# 1. DEV Pipeline
+
+File:
+
+```text
+Jenkinsfile-dev
+```
+
+Purpose:
+
+* automatic CI/CD for Development environment.
+
+Pipeline stages:
+
+1. Checkout code from GitHub
+2. Build application with Maven
+3. Run tests
+4. Build Docker image
+5. Push Docker image to Docker Hub
+6. Deploy automatically to DEV environment
+7. Cleanup workspace
+
+Docker image:
+
+```text
 ileanaboboescu07/java-todo-devops:dev-v1
+```
 
-# AWS Infrastructure with Terraform
+---
 
-Terraform is used for Infrastructure as Code (IaC).
+# 2. Production Pipeline
 
-The infrastructure is defined using code instead of manual AWS configuration.
+File:
 
-Terraform automatically provisions:
-- EC2 instances,
-- Security Groups,
-- network access rules.
+```text
+Jenkinsfile-prod
+```
 
-## Resources Created
+Purpose:
 
-- Development EC2 instance
-- Production EC2 instance
-- Security Group for SSH and application access
+* Production deployment.
+
+Pipeline stages:
+
+1. Checkout code from GitHub
+2. Build application
+3. Run tests
+4. Build Docker image
+5. Push Docker image to Docker Hub
+6. Deploy automatically to Production environment
+7. Cleanup workspace
+
+Docker image:
+
+```text
+ileanaboboescu07/java-todo-devops:prod-v1
+```
+
+The Production pipeline starts automatically after Terraform pipeline success.
+
+```groovy
+triggers {
+    upstream(upstreamProjects: 'todo-terraform-prod', threshold: hudson.model.Result.SUCCESS)
+}
+```
+
+---
+
+# 3. Terraform Pipeline
+
+File:
+
+```text
+Jenkinsfile-terraform
+```
+
+Purpose:
+
+* Infrastructure provisioning.
+
+Pipeline stages:
+
+1. Checkout code
+2. Terraform init
+3. Terraform plan
+4. Terraform apply
+
+Terraform actions are selected through Jenkins parameters:
+
+```groovy
+parameters {
+    choice(
+        name: 'ACTION',
+        choices: ['apply', 'destroy'],
+        description: 'Choose Terraform action'
+    )
+}
+```
+
+Terraform currently uses:
+
+```text
+terraform apply -auto-approve tfplan
+```
+
+The destroy stage is currently commented for safety.
+
+---
+
+# Terraform Infrastructure
+
+Terraform provisions:
+
+* DEV EC2 instance,
+* PROD EC2 instance,
+* Security Group,
+* Elastic IPs.
+
+---
 
 # Terraform Files
 
 ## main.tf
 
-Defines AWS infrastructure resources:
-- AWS provider,
-- Security Groups,
-- EC2 instances.
+Defines:
+
+* AWS provider,
+* EC2 instances,
+* Security Groups,
+* Elastic IPs,
+* S3 backend.
+
+---
 
 ## variables.tf
 
 Defines reusable variables:
-- AWS region,
-- EC2 instance type,
-- SSH key name.
+
+* region,
+* instance type,
+* key pair,
+* AMI.
+
+---
 
 ## outputs.tf
 
-Displays useful outputs after deployment:
-- Development server public IP,
-- Production server public IP.
+Displays:
+
+* DEV public IP,
+* PROD public IP.
+
+---
+
+# Terraform Remote State (S3 Backend)
+
+Terraform state is stored remotely in AWS S3.
+
+This prevents state loss when Jenkins workspace is cleaned.
+
+Backend configuration:
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket = "java-todo-tfstate"
+    key    = "terraform.tfstate"
+    region = "eu-central-1"
+  }
+}
+```
+
+Benefits:
+
+* persistent Terraform state,
+* safer pipelines,
+* infrastructure consistency,
+* closer to real enterprise setup.
+
+---
 
 # Terraform Commands
 
-## Initialize Terraform
-terraform init
+## Terraform Init
 
-## Preview Infrastructure Changes
-terraform plan
+```bash
+terraform init -migrate-state -force-copy
+```
 
-## Create Infrastructure
-terraform apply
+---
 
-## Destroy Infrastructure
-terraform destroy
+## Terraform Plan
 
+```bash
+terraform plan -out=tfplan
+```
+
+Creates a Terraform execution plan.
+
+The plan is saved locally into:
+
+```text
+tfplan
+```
+
+---
+
+## Terraform Apply
+
+```bash
+terraform apply -auto-approve tfplan
+```
+
+Applies the exact previously generated plan.
+
+---
+
+# What is tfplan?
+
+`tfplan` is a temporary Terraform plan file.
+
+Terraform first calculates:
+
+* resources to create,
+* resources to modify,
+* resources to destroy.
+
+The calculated plan is stored in:
+
+```text
+tfplan
+```
+
+Terraform apply later executes that exact plan.
+
+This is safer and closer to real production workflows.
+
+---
 
 # Elastic IP
 
-Elastic IPs are used to provide static public IP addresses.
+Elastic IPs provide static public IP addresses.
 
 Without Elastic IP:
-- the public IP changes after stopping and starting EC2 instances.
+
+* EC2 public IP changes after restart.
 
 With Elastic IP:
-- the public IP remains permanent.
+
+* public IP remains permanent.
 
 Benefits:
-- stable SSH access,
-- stable Jenkins deployment configuration,
-- stable browser access.
 
-# SSH Access
+* stable SSH access,
+* stable Jenkins deployment,
+* stable browser access.
 
-## Development Server
+---
+
+# Jenkins Workspace
+
+Jenkins creates local workspaces inside the Jenkins container.
+
+Workspace location:
+
+```text
+/var/jenkins_home/workspace
+```
+
+Examples:
+
+```text
+todo-dev-pipeline
+todo-prod-pipeline
+todo-terraform-prod
+```
+
+Workspace contains:
+
+* source code,
+* Maven artifacts,
+* Docker build context,
+* Terraform files,
+* tfplan,
+* temporary files.
+
+---
+
+# Workspace Cleanup
+
+DEV and PROD pipelines use:
+
+```groovy
+post {
+    always {
+        cleanWs()
+    }
+}
+```
+
+This automatically cleans temporary Jenkins files after build completion.
+
+Terraform pipeline does not use cleanup because Terraform state must remain persistent.
+
+---
+
+# Jenkins Container
+
+Jenkins runs inside Docker.
+
+Container access:
+
+```bash
+docker exec -it jenkins bash
+```
+
+---
+
+# Useful Jenkins Container Commands
+
+## Open Jenkins workspace
+
+```bash
+cd /var/jenkins_home/workspace
+```
+
+---
+
+## View Terraform workspace
+
+```bash
+cd /var/jenkins_home/workspace/todo-terraform-prod/terraform
+```
+
+---
+
+## List Terraform resources
+
+```bash
+terraform state list
+```
+
+---
+
+## View Terraform state
+
+```bash
+cat terraform.tfstate
+```
+
+---
+
+## Check Jenkins disk usage
+
+```bash
+df -h
+```
+
+---
+
+## Check Jenkins workspace size
+
+```bash
+du -h --max-depth=1 /var/jenkins_home/workspace
+```
+
+---
+
+# Docker Commands
+
+## Build Docker image
+
+```bash
+docker build -t java-todo-devops .
+```
+
+---
+
+## Run Docker container
+
+```bash
+docker run -d -p 8081:8080 java-todo-devops
+```
+
+---
+
+## View running containers
+
+```bash
+docker ps
+```
+
+---
+
+## Stop container
+
+```bash
+docker stop <container_id>
+```
+
+---
+
+## Docker cleanup
+
+```bash
+docker system prune -a -f
+```
+
+---
+
+# AWS EC2 Access
+
+## DEV Server
+
+```bash
 ssh -i ~/.ssh/devops-final-key-v2.pem ubuntu@DEV_IP
+```
 
-## Production Server
+---
+
+## PROD Server
+
+```bash
 ssh -i ~/.ssh/devops-final-key-v2.pem ubuntu@PROD_IP
+```
 
+---
 
-# Deployment Automation with Ansible
+# Ansible Deployment
 
-Ansible is used to automate application deployment on AWS EC2 instances.
+Ansible deploys the application automatically to AWS EC2.
 
-The Ansible playbook performs the following actions:
+Deployment steps:
 
-- connects to EC2 instances via SSH,
-- installs Docker,
-- pulls the Docker image from Docker Hub,
-- removes old containers,
-- starts the new application container.
+1. Connect to EC2 using SSH
+2. Install Docker
+3. Pull Docker image
+4. Remove old container
+5. Start new container
 
-# Ansible Files
+---
 
-## inventory.ini
+# Ansible Commands
 
-Contains:
-- target servers,
-- SSH configuration,
-- SSH private key path.
+## Deploy DEV
 
-## deploy-dev.yml
-
-Deployment playbook for the Development environment.
-
-## deploy-prod.yml
-
-Deployment playbook for the Production environment.
-
-
-# Run Ansible Deployment
-
-## Deploy Development
+```bash
 ansible-playbook ansible/deploy-dev.yml -i ansible/inventory.ini
+```
 
-## Deploy Production
+---
+
+## Deploy PROD
+
+```bash
 ansible-playbook ansible/deploy-prod.yml -i ansible/inventory.ini
+```
 
+---
 
-# Jenkins CI/CD
+# Docker Hub
 
-Jenkins runs inside a Docker container on the Ubuntu VM.
+Docker images are stored in Docker Hub.
 
-The Jenkins container uses the host Docker daemon through Docker socket mount:
+DEV image:
 
--v /var/run/docker.sock:/var/run/docker.sock
+```text
+ileanaboboescu07/java-todo-devops:dev-v1
+```
 
-This allows Jenkins to:
-- build Docker images,
-- push images to Docker Hub,
-- automate deployments.
+PROD image:
 
-The Docker group ID from the host system was added to the Jenkins container to allow Docker access.
+```text
+ileanaboboescu07/java-todo-devops:prod-v1
+```
 
-# Jenkins Pipeline Stages
+---
 
-The Jenkins pipeline automates the entire CI/CD process.
+# Application Endpoints
 
-Pipeline stages:
+## Get tasks
 
-1. Checkout source code from GitHub
-2. Build application using Maven
-3. Run automated tests
-4. Build Docker image
-5. Push Docker image to Docker Hub
-6. Deploy automatically to Development environment
-7. Wait for manual approval
-8. Deploy automatically to Production environment
+```text
+GET /tasks
+```
 
-# Jenkinsfile Overview
+---
 
-The Jenkinsfile defines the CI/CD pipeline.
+## Create task
 
-Important stages:
+```text
+POST /tasks
+```
 
-## Build Stage
-sh 'mvn clean package'
+---
 
-Compiles and packages the application.
+## Update task
 
-## Test Stage
-sh 'mvn test'
+```text
+PUT /tasks/{id}
+```
 
-Runs automated tests.
+---
 
-## Docker Build Stage
-sh 'docker build -t ileanaboboescu07/java-todo-devops:dev-v1 .'
+## Delete task
 
-Builds the Docker image.
+```text
+DELETE /tasks/{id}
+```
 
-## Docker Push Stage
-sh 'docker push ileanaboboescu07/java-todo-devops:dev-v1'
+---
 
-Pushes the image to Docker Hub.
+## Health endpoint
 
-## Deploy DEV Stage
-sh 'ansible-playbook ansible/deploy-dev.yml -i ansible/inventory.ini'
+```text
+GET /health
+```
 
-Deploys the application to the Development environment.
+---
 
-## Approval Stage
-input 'Deploy to Production?'
+# Verify Application in Browser
 
-Waits for manual approval before Production deployment.
+## DEV
 
-## Deploy PROD Stage
-sh 'ansible-playbook ansible/deploy-prod.yml -i ansible/inventory.ini'
-
-Deploys the application to the Production environment.
-
-
-# Application Access
-
-## Development Environment
+```text
 http://DEV_IP:8081/tasks
+```
 
-## Production Environment
+---
+
+## PROD
+
+```text
 http://PROD_IP:8081/tasks
+```
 
+---
 
 # Create Task Example
-curl -X POST http://3.76.178.231:8081/tasks \-H "Content-Type: application/json" \-d '{"title":"Test task"}'
 
-Check tasks in browser:
-http://IP:8081/tasks
+```bash
+curl -X POST http://IP:8081/tasks \
+-H "Content-Type: application/json" \
+-d '{"title":"Test task"}'
+```
 
-If the endpoint returns:
-[]
+---
 
-it means:
-- the application is running correctly,
-- the REST API works,
-- the task list is currently empty.
+# Health Check Example
 
+```text
+http://IP:8081/health
+```
+
+---
+
+# Git Commands Used During Development
+
+## Switch branch
+
+```bash
+git checkout dev
+```
+
+---
+
+## Merge main into dev
+
+```bash
+git merge main
+```
+
+---
+
+## Push changes
+
+```bash
+git push origin dev
+```
+
+---
+
+# GitHub Webhook + ngrok
+
+GitHub webhook was configured using ngrok.
+
+ngrok exposes local Jenkins publicly.
+
+Example:
+
+```bash
+ngrok http 60199
+```
+
+Webhook URL example:
+
+```text
+https://example.ngrok-free.app/github-webhook/
+```
+
+---
 
 # Problems Solved During Implementation
 
-The project implementation included solving several DevOps issues:
+The project included solving multiple real DevOps issues.
 
-- Docker daemon permission issues inside Jenkins container,
-- SSH key permission configuration,
-- Docker socket access inside Jenkins container,
-- Docker Hub authentication,
-- Ansible host verification issues,
-- Elastic IP configuration,
-- Jenkins container configuration,
-- AWS public IP changes after EC2 restart...
+Examples:
+
+* Jenkins Docker permission issues,
+* Docker socket access,
+* SSH configuration problems,
+* AWS credential configuration,
+* Terraform Security Group duplicate errors,
+* Terraform state persistence,
+* Jenkins disk full problems,
+* dpkg lock errors during Ansible install,
+* Git merge conflicts,
+* Jenkins workspace cleanup problems,
+* ngrok webhook configuration,
+* Elastic IP persistence,
+* Docker cleanup and disk management.
+
+---
+
+# Future Improvements
+
+Possible future improvements:
+
+* Kubernetes deployment,
+* Nginx reverse proxy,
+* HTTPS with SSL,
+* Monitoring with Prometheus/Grafana,
+* GitHub Actions integration,
+* Terraform modules,
+* Blue/Green deployment,
+* Docker Compose,
+* SonarQube integration.
+
+---
+
+# Final Notes
+
+This project demonstrates a complete DevOps workflow using real-world tools and technologies.
+
+The implementation includes:
+
+* CI/CD automation,
+* Infrastructure as Code,
+* Cloud infrastructure provisioning,
+* automated deployments,
+* Docker containerization,
+* remote Terraform state management,
+* Development and Production environments.
+
+The project was implemented and configured manually step-by-step, including troubleshooting and infrastructure management tasks.
+
