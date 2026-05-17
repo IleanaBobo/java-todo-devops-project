@@ -77,12 +77,10 @@ stages {
             }
         }
     }
-
+}
 post {
         always {
             cleanWs()
         }
     }
-}
-
 }
