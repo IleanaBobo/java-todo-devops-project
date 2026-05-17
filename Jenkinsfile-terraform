@@ -26,7 +26,7 @@ stages {
                 string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY')
             ]) {
                 dir('terraform') {
-                    sh 'terraform init'
+                    sh 'terraform init -migrate-state -force-copy'
                 }
             }
         }
