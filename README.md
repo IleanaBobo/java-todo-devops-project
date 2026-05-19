@@ -23,7 +23,6 @@ The entire flow is automated using:
 * AWS,
 * GitHub.
 
-The application is deployed automatically to the Development environment after code changes on the `dev` branch.
 
 Production deployment is controlled separately through a dedicated Terraform pipeline and Production pipeline.
 
@@ -50,7 +49,6 @@ Production deployment is controlled separately through a dedicated Terraform pip
 
 # Project Architecture
 
-```text
 Developer
     ↓
 GitHub Repository
@@ -68,7 +66,6 @@ Docker Hub
 Ansible Deployment
     ↓
 Running Application
-```
 
 ---
 
@@ -77,13 +74,12 @@ Running Application
 ## Development Flow
 
 1. Developer pushes code to `dev` branch.
-2. GitHub webhook triggers Jenkins automatically.
-3. Jenkins runs the DEV pipeline.
-4. Maven builds the application.
-5. Automated tests run.
-6. Docker image is created.
-7. Docker image is pushed to Docker Hub.
-8. Ansible deploys the application automatically to DEV EC2.
+2. Jenkins runs the DEV pipeline.
+3. Maven builds the application.
+4. Automated tests run.
+5. Docker image is created.
+6. Docker image is pushed to Docker Hub.
+7. Ansible deploys the application automatically to DEV EC2.
 
 ---
 
@@ -117,10 +113,8 @@ Used for:
 
 The DEV Jenkins pipeline uses:
 
-```text
 Branch: dev
 Jenkinsfile: Jenkinsfile-dev
-```
 
 ---
 
@@ -134,17 +128,13 @@ Used for:
 
 The PROD Jenkins pipeline uses:
 
-```text
 Branch: main
 Jenkinsfile: Jenkinsfile-prod
-```
 
 Terraform pipeline uses:
 
-```text
 Branch: main
 Jenkinsfile: Jenkinsfile-terraform
-```
 
 ---
 
@@ -159,26 +149,18 @@ This reduces image size and separates:
 
 Dockerfile:
 
-```dockerfile
-FROM maven:3.9-eclipse-temurin-17 AS build
+1. Build Java application using Maven
+2. Generate JAR file
+3. Create lightweight runtime image
+4. Run Spring Boot application
 
-WORKDIR /app
+Port mapping:
+8081:8080
 
-COPY pom.xml .
-COPY src ./src
+Where:
+- 8081 = host/server port
+- 8080 = application port inside container
 
-RUN mvn clean package -DskipTests
-
-FROM eclipse-temurin:17-jdk-alpine
-
-WORKDIR /app
-
-COPY --from=build /app/target/todo-1.0.0.jar app.jar
-
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
-```
 
 ---
 
@@ -192,13 +174,7 @@ The project contains 3 separate Jenkins pipelines.
 
 File:
 
-```text
 Jenkinsfile-dev
-```
-
-Purpose:
-
-* automatic CI/CD for Development environment.
 
 Pipeline stages:
 
@@ -212,9 +188,7 @@ Pipeline stages:
 
 Docker image:
 
-```text
 ileanaboboescu07/java-todo-devops:dev-v1
-```
 
 ---
 
@@ -222,9 +196,7 @@ ileanaboboescu07/java-todo-devops:dev-v1
 
 File:
 
-```text
 Jenkinsfile-prod
-```
 
 Purpose:
 
@@ -242,17 +214,14 @@ Pipeline stages:
 
 Docker image:
 
-```text
 ileanaboboescu07/java-todo-devops:prod-v1
-```
 
 The Production pipeline starts automatically after Terraform pipeline success.
 
-```groovy
 triggers {
     upstream(upstreamProjects: 'todo-terraform-prod', threshold: hudson.model.Result.SUCCESS)
 }
-```
+
 
 ---
 
@@ -260,9 +229,7 @@ triggers {
 
 File:
 
-```text
 Jenkinsfile-terraform
-```
 
 Purpose:
 
@@ -277,7 +244,6 @@ Pipeline stages:
 
 Terraform actions are selected through Jenkins parameters:
 
-```groovy
 parameters {
     choice(
         name: 'ACTION',
@@ -285,13 +251,10 @@ parameters {
         description: 'Choose Terraform action'
     )
 }
-```
 
 Terraform currently uses:
 
-```text
 terraform apply -auto-approve tfplan
-```
 
 The destroy stage is currently commented for safety.
 
@@ -350,7 +313,6 @@ This prevents state loss when Jenkins workspace is cleaned.
 
 Backend configuration:
 
-```hcl
 terraform {
   backend "s3" {
     bucket = "java-todo-tfstate"
@@ -358,7 +320,7 @@ terraform {
     region = "eu-central-1"
   }
 }
-```
+
 
 Benefits:
 
@@ -373,33 +335,25 @@ Benefits:
 
 ## Terraform Init
 
-```bash
 terraform init -migrate-state -force-copy
-```
 
 ---
 
 ## Terraform Plan
 
-```bash
 terraform plan -out=tfplan
-```
 
 Creates a Terraform execution plan.
 
 The plan is saved locally into:
 
-```text
 tfplan
-```
 
 ---
 
 ## Terraform Apply
 
-```bash
 terraform apply -auto-approve tfplan
-```
 
 Applies the exact previously generated plan.
 
@@ -417,13 +371,9 @@ Terraform first calculates:
 
 The calculated plan is stored in:
 
-```text
 tfplan
-```
 
 Terraform apply later executes that exact plan.
-
-This is safer and closer to real production workflows.
 
 ---
 
@@ -453,17 +403,14 @@ Jenkins creates local workspaces inside the Jenkins container.
 
 Workspace location:
 
-```text
 /var/jenkins_home/workspace
-```
+
 
 Examples:
 
-```text
 todo-dev-pipeline
 todo-prod-pipeline
 todo-terraform-prod
-```
 
 Workspace contains:
 
@@ -480,13 +427,12 @@ Workspace contains:
 
 DEV and PROD pipelines use:
 
-```groovy
 post {
     always {
         cleanWs()
     }
 }
-```
+
 
 This automatically cleans temporary Jenkins files after build completion.
 
@@ -500,9 +446,8 @@ Jenkins runs inside Docker.
 
 Container access:
 
-```bash
 docker exec -it jenkins bash
-```
+
 
 ---
 
@@ -510,49 +455,33 @@ docker exec -it jenkins bash
 
 ## Open Jenkins workspace
 
-```bash
 cd /var/jenkins_home/workspace
-```
 
 ---
 
 ## View Terraform workspace
 
-```bash
 cd /var/jenkins_home/workspace/todo-terraform-prod/terraform
-```
+
 
 ---
 
 ## List Terraform resources
 
-```bash
 terraform state list
-```
 
 ---
 
 ## View Terraform state
 
-```bash
 cat terraform.tfstate
-```
 
----
-
-## Check Jenkins disk usage
-
-```bash
-df -h
-```
 
 ---
 
 ## Check Jenkins workspace size
 
-```bash
 du -h --max-depth=1 /var/jenkins_home/workspace
-```
 
 ---
 
@@ -560,41 +489,19 @@ du -h --max-depth=1 /var/jenkins_home/workspace
 
 ## Build Docker image
 
-```bash
 docker build -t java-todo-devops .
-```
 
 ---
 
 ## Run Docker container
 
-```bash
 docker run -d -p 8081:8080 java-todo-devops
-```
 
 ---
 
 ## View running containers
 
-```bash
 docker ps
-```
-
----
-
-## Stop container
-
-```bash
-docker stop <container_id>
-```
-
----
-
-## Docker cleanup
-
-```bash
-docker system prune -a -f
-```
 
 ---
 
@@ -602,17 +509,13 @@ docker system prune -a -f
 
 ## DEV Server
 
-```bash
 ssh -i ~/.ssh/devops-final-key-v2.pem ubuntu@DEV_IP
-```
 
 ---
 
 ## PROD Server
 
-```bash
 ssh -i ~/.ssh/devops-final-key-v2.pem ubuntu@PROD_IP
-```
 
 ---
 
@@ -634,17 +537,13 @@ Deployment steps:
 
 ## Deploy DEV
 
-```bash
 ansible-playbook ansible/deploy-dev.yml -i ansible/inventory.ini
-```
 
 ---
 
 ## Deploy PROD
 
-```bash
 ansible-playbook ansible/deploy-prod.yml -i ansible/inventory.ini
-```
 
 ---
 
@@ -654,15 +553,11 @@ Docker images are stored in Docker Hub.
 
 DEV image:
 
-```text
 ileanaboboescu07/java-todo-devops:dev-v1
-```
 
 PROD image:
 
-```text
 ileanaboboescu07/java-todo-devops:prod-v1
-```
 
 ---
 
@@ -670,41 +565,31 @@ ileanaboboescu07/java-todo-devops:prod-v1
 
 ## Get tasks
 
-```text
 GET /tasks
-```
 
 ---
 
 ## Create task
 
-```text
 POST /tasks
-```
 
 ---
 
 ## Update task
 
-```text
 PUT /tasks/{id}
-```
 
 ---
 
 ## Delete task
 
-```text
 DELETE /tasks/{id}
-```
 
 ---
 
 ## Health endpoint
 
-```text
 GET /health
-```
 
 ---
 
@@ -712,35 +597,27 @@ GET /health
 
 ## DEV
 
-```text
 http://DEV_IP:8081/tasks
-```
 
 ---
 
 ## PROD
 
-```text
 http://PROD_IP:8081/tasks
-```
 
 ---
 
 # Create Task Example
 
-```bash
 curl -X POST http://IP:8081/tasks \
 -H "Content-Type: application/json" \
 -d '{"title":"Test task"}'
-```
 
 ---
 
 # Health Check Example
 
-```text
 http://IP:8081/health
-```
 
 ---
 
@@ -748,25 +625,19 @@ http://IP:8081/health
 
 ## Switch branch
 
-```bash
 git checkout dev
-```
 
 ---
 
 ## Merge main into dev
 
-```bash
 git merge main
-```
 
 ---
 
 ## Push changes
 
-```bash
 git push origin dev
-```
 
 ---
 
@@ -778,37 +649,11 @@ ngrok exposes local Jenkins publicly.
 
 Example:
 
-```bash
 ngrok http 60199
-```
 
 Webhook URL example:
 
-```text
 https://example.ngrok-free.app/github-webhook/
-```
-
----
-
-# Problems Solved During Implementation
-
-The project included solving multiple real DevOps issues.
-
-Examples:
-
-* Jenkins Docker permission issues,
-* Docker socket access,
-* SSH configuration problems,
-* AWS credential configuration,
-* Terraform Security Group duplicate errors,
-* Terraform state persistence,
-* Jenkins disk full problems,
-* dpkg lock errors during Ansible install,
-* Git merge conflicts,
-* Jenkins workspace cleanup problems,
-* ngrok webhook configuration,
-* Elastic IP persistence,
-* Docker cleanup and disk management.
 
 ---
 
@@ -824,23 +669,11 @@ Possible future improvements:
 * Terraform modules,
 * Blue/Green deployment,
 * Docker Compose,
-* SonarQube integration.
 
 ---
 
 # Final Notes
 
 This project demonstrates a complete DevOps workflow using real-world tools and technologies.
-
-The implementation includes:
-
-* CI/CD automation,
-* Infrastructure as Code,
-* Cloud infrastructure provisioning,
-* automated deployments,
-* Docker containerization,
-* remote Terraform state management,
-* Development and Production environments.
-
 The project was implemented and configured manually step-by-step, including troubleshooting and infrastructure management tasks.
 
