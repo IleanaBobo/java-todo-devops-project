@@ -3,7 +3,7 @@ name: DevOps Gadgets Auto Test 2
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '3/5 * * * *'
 
 jobs:
   auto-build:
