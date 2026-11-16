@@ -1,0 +1,29 @@
+
+name: DevOps Gadgets Test Build
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  test-build:
+    name: Test Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start build
+        run: echo "Starting DevOps Gadgets test build"
+
+      - name: Build project
+        run: |
+          echo "Building test project..."
+          sleep 5
+          echo "Build completed successfully!"
+
+      - name: Finish build
+        run: echo "DevOps Gadgets test build passed"
