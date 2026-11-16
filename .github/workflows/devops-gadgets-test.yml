@@ -1,5 +1,5 @@
 
-name: DevOps Gadgets Test Build
+name: DevOps Gadgets Test Build manual
 
 on:
   workflow_dispatch:
