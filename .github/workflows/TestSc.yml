@@ -1,4 +1,4 @@
-name: DevOps Gadgets Test Build auto
+name: DevOps Gadgets Test Build autot
 
 on:
   workflow_dispatch:
