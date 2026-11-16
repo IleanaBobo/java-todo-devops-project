@@ -1,7 +1,6 @@
 name: DevOps Gadgets Test Build autot
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: '*/2 * * * *'
 
